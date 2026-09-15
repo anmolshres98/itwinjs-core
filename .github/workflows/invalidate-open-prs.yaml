@@ -1,5 +1,8 @@
 # Triggered on a commit to master when core/backend/package.json changes
 # This is mainly to invalidate PRs on an @bentley/imodeljs-native version change
+#
+# FORK-TEST VARIANT: retargeted at anmolshres98/itwinjs-core using the default
+# GITHUB_TOKEN (the admin PAT secret doesn't exist here) with statuses: write.
 
 name: Invalidate Open PRs when imodeljs-native is updated
 
@@ -11,24 +14,30 @@ on:
     paths:
     - '**/core/backend/package.json'
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   invalidate:
     name: Invalidate imodeljs-native status check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout v6.0.3
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
-          token: ${{ secrets.IMJS_ADMIN_GH_TOKEN }}
-          ref: ${{ github.ref }} # checkouts the branch that triggered the workflow
+          persist-credentials: false
+          ref: ${{ github.ref }}
           fetch-depth: 0
-      - name: Set Git Config
-        run: |
-          git config --local user.email imodeljs-admin@users.noreply.github.com
-          git config --local user.name imodeljs-admin
+
+      # actions/setup-node v6.5.0
+      - name: Setup node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "24.x"
+
       - name: Run invalidate-status-checks.mjs
         run: |
-          npm install octokit
-          npm install dotenv
           node ./.github/workflows/automation-scripts/invalidate-status-checks.mjs
         env:
-          GITHUB_TOKEN: ${{ secrets.IMJS_ADMIN_GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
